@@ -1,0 +1,14 @@
+<html>
+	<head></head>
+	<body>
+		click anywhere, choose directory and open console to test
+		<script type="module">
+			import { dirv } from "../../dirv.js"
+			document.onclick = async function () {
+				let drive = await dirv()
+				let result = await drive.r("subdir/nested.js")
+				console.log(result)
+			}
+		</script>
+	</body>
+</html>

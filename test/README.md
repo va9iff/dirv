@@ -1,0 +1,1 @@
+# this directory is passed in `tests/` folder to as example
