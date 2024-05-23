@@ -6,7 +6,7 @@
 			import { dirv } from "../../dirv.js"
 			document.onclick = async function () {
 				let drive = await dirv()
-				let result = await drive.write("hii.txt", "hiii")
+				let result = await drive.reach("subdir/nested.js")
 				console.log(result)
 			}
 		</script>

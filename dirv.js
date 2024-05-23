@@ -2,65 +2,13 @@ export class Dirv {
 	constructor(dir) {
 		this.dir = dir
 	}
-	// return path directory names array and last part (file/folder) tuple
-	async dirHandleAndNameFromPath(pathStrig) {
-		const path = pathStrig.split('/')
-		const name = path.pop()
-		let dirHandle = this.dir
-		for (const dirName of path) {
-			dirHandle = await dirHandle.getDirectoryHandle(dirName)
-		}
-		return [dirHandle, name]
+	// returns file handle
+	async take(fileName, create = false) {
+		return await this.dir.getFileHandle(fileName, { create })
 	}
-	// return file handle for given file path
-	async fileHandleFromPath(filePath, opts) {
-		const [dirHandle, name] = await this.dirHandleAndNameFromPath(filePath)
-		return await dirHandle.getFileHandle(name, opts)
-	}
-	// return dir handle for given file path
-	async dirPathHandle(dirPath) {
-		const [dirHandle, name] = await this.dirHandleAndNameFromPath(dirPath)
-		return await dirHandle.getDirectoryHandle(name)
-	}
-	// simplest way to read a top level file
-	async read(fileName, opts = {}) {
-		const fileHandle = await this.dir.getFileHandle(fileName, opts)
-		const file = await fileHandle.getFile()
-		return await file.text()
-	}
-	// simplest way to write to a top level file
-	async write(fileName, content = '', opts = { create: true }) {
-		// no opts.create will rise error when writing to a nonexistent file
-		const fileHandle = await this.dir.getFileHandle(fileName, opts)
-		const writable = await fileHandle.createWritable()
-		await writable.write(content)
-		await writable.close()
-		return fileHandle
-	}
-	// read a file by its path and return text string
-	async r(filePath) {
-		const fileHandle = await this.fileHandleFromPath(filePath)
-		const file = await fileHandle.getFile()
-		return await file.text()
-	}
-	// write to a file by its path (doesn't create directories. see touch)
-	async w(filePath, contents = '') {
-		const fileHandle = await this.fileHandleFromPath(filePath, { create: true })
-		const writable = await fileHandle.createWritable()
-		await writable.write(contents)
-		await writable.close() // Close the file and write the contents to disk.
-	}
-	// create all subdirectories.
-	async mkdirAll(pathToDir, opts = {}) {
-		const path = pathToDir.split('/')
-		let dirHandle = this.dir
-		for (const dirName of path) {
-			dirHandle = await dirHandle.getDirectoryHandle(dirName, {
-				...opts,
-				create: true,
-			})
-		}
-		return dirHandle // no need cuz we didn't .pop() so it went in fors
+	// returns sub directory handle
+	async _cd(dirName, create = false) {
+		return await this.dir.getDirectoryHandle(dirName, { create })
 	}
 	// pass "file" or "directory" to filter handles
 	async _ls(kind = null){
@@ -69,67 +17,110 @@ export class Dirv {
 		if (kind) return arr.filter(handle => handle.kind == kind)
 		return arr
 	}
+	async remove(fileName) {
+		const fileHandle = await this.take(fileName)
+		return await fileHandle.remove()
+	}
+	// _cd returning Dirv instead of dir handle
+	async cd(dirName, create = false) {
+		return new Dirv(await this._cd(dirName, { create }))
+	}
+	// simplest way to read a top level file
+	async read(fileName, create) {
+		const fileHandle = await this.take(fileName, create)
+		const file = await fileHandle.getFile()
+		return await file.text()
+	}
+	// simplest way to write to a top level file
+	async write(fileName, content = '') {
+		const fileHandle = await this.take(fileName, true)
+		const writable = await fileHandle.createWritable()
+		await writable.write(content)
+		await writable.close()
+		return fileHandle
+	}
+	/* ---- methods using path ---- */
+	// returns path dirv and last part's (file or folder) name string tuple.
+	async dirOf(fullPath, create = false) {
+		const pathArray = fullPath.split('/')
+		const name = pathArray.pop()
+		let current = this
+		for (const dirName of pathArray)
+			current = await current.cd(dirName, create)
+		return [current, name]
+	}
+	// cd by full path to directory
+	async goto(dirFullPath, create = false) {
+		const [dirPath, dirName] = await this.dirOf(dirFullPath, create)
+		return await dirPath.cd(dirName, create)
+	}
+	// returns file handle for given file path (expects path to exist)
+	async reach(fileFullPath, create = false) {
+		const [filePath, fileName] = await this.dirOf(fileFullPath)
+		return await filePath.take(fileName, create)
+	}
+	// read a file by its path and return text string
+	async r(fileFullPath, create) {
+		const [filePath, fileName] = await this.dirOf(fileFullPath)
+		return await filePath.read(fileName, create)
+	}
+	// write to a file by its path
+	async w(fileFullPath, contents = '', createPath = false) {
+		const [filePath, fileName] = await this.dirOf(fileFullPath, createPath)
+		return await filePath.write(ffileName, content)
+	}
+	// create a directory and return its Dirv
+	async mkdir(dirName) {
+		return await this.cd(dirName, true)
+	} 
+	// create all sub directories
+	async mkdirAll(dirFullPath) {
+		return await this.goto(dirFullPath, true)
+	}
 	// same with _ls but returns names
 	async ls(kind = null) {
 		return (await this._ls(kind)).map(handle=>handle.name)
 	}
-	async remove(fileName, opts = {}) {
-		const fileHandle = await this.dir.getFileHandle(fileName, opts)
-		return await fileHandle.remove()
+	// return { dirName1: dirv, ... } for sub directories
+	async dirs() {
+		// ! not tested
+		const dirMap = {}
+		const dirs = await this.ls("directory")
+		for (const dirName of dirs) {
+			dirMap[dirName] = await this.cd(dirName)
+		}
 	}
-	/* -------- Above Is Tested --------  */
-	// mkdirAll but last part is file. unlike w, it creates all sub directories.
-	async touch(pathToFile, contents = '') {
-		const path = pathToFile.split('/')
-		const name = path.pop()
-		const pathToDir = path.join('/')
-		const dirHandle = await this.mkdirAll(pathToDir)
+	// returns true if has the file, false if not
+	async hasFile(fileName) {
+		// !!! instead of listing all files, use getFileHandle and
+		// !!! catch for not found error by returning false. if goes well, true.
+		return (await this.ls("file")).includes(fileName)
 	}
-	// a shortcut to extract sub dir Dirv with deconstructing. to get "sub" dir:
-	// const { sub } = dirvParentOfSub
-	get sub() {
-		return new Proxy(
-			{},
-			{
-				get(_, dirName) {
-					return new Promis(async function (res, rej) {
-						try {
-							res(await this.cd(dirName))
-						} catch (err) {
-							rej(err)
-						}
-					})
-				},
-			}
-		)
+	// returns true if has the directory, false if not
+	async hasDir(dirName) {
+		return (await this.ls("directory")).includes(dirName)
 	}
-	async files() {
-		// returns { ChildDirName, Dirv }[]
-		return {}
+	// returns boolean. "name" for a file, "name/" for a directory
+	async has(name) {
+		if (name.at(-1) == "/")
+			return await this.hasDir(name.split(0, -1))
+		return await this.hasFile(name)
 	}
-	async cd() {
-		return new Dirv(await this._cd(...arguments))
+	async exists(fullPath) {
+		const [path, name] = await this.dirOf(fullPath)
+		await path.has(name)
 	}
-	async _cd(dirName, opts = {}) {
-		return await this.dir.getDirectoryHandle(dirName, opts)
+	// async copy(path1, path2) {}
+	// async move(path1, path2) {}
+	// async delete() {} // removes for itself
+
+	// read a file. if don't exist, write default content and return to it.
+	async either(fileFullPath, content = "") {
+		const [dirPath, fileName] = await this.dirOf(fileFullPath, true)
+		if (await dirPath.hasFile(fileName)) return await dirPath.read(fileName)
+		await dirPath.write(fileName, content)
+		return content
 	}
-	async mkdir(dirName, opts = {}) {
-		await this.cd(dirName, { ...opts, create: true })
-	}
-	async delete() {} // removes for itself. no argument needed
-	async copy(path1, path2) {}
-	async move(path1, path2) {}
-	async has(fileOrDirName) {
-		// just like exists but only top level
-	}
-	async exists(filePath) {
-		// ...
-		return null
-		return "file"
-		return "directory"
-	}
-	async hasFile(fileName) {}
-	async hasDir(dirName) {}
 }
 
 export async function dirv(dir = null) {
