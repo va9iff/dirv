@@ -199,11 +199,11 @@ export class Dirv {
 	// enables us to deconstruct from an object a dirv that we cd into
 	// const { childDir } = await dirv.dirs()
 	// const childDir = await dirv.cd("childDir") // no duplicate needed
-	async dirs() {
+	async dirs(create = false) {
 		const dirMap = {}
 		const dirNames = await this.ls("directory")
 		for (const dirName of dirNames) {
-			dirMap[dirName] = await this.cd(dirName)
+			dirMap[dirName] = await this.cd(dirName, create)
 		}
 		return dirMap
 	}

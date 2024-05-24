@@ -1,3 +1,0 @@
-function goodFun(ja) {
-	ja
-}
