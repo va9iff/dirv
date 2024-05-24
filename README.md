@@ -4,7 +4,7 @@
 import { Dirv } from "./dirv.js"
 const dirv = await Dirv.pick() // open system's directory picker
 await dirv.write("hello.txt", "this is our message")
-const inner = await dirv.cd("inner") // take an inner folder
+const inner = await dirv.cd("inner", true) // `true` creates dir if don't exists
 await inner.write("nested.json", '{ "bird": true }')
 ```
 
