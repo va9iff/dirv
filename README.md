@@ -25,35 +25,97 @@ continueButton.onclick = async () => {
 > you can pass `key` to `.want()` and `.pick()` to differentiate which saved 
 > Dirv to load.
 
-here's a list of all instance methods (keep in mind, all are async).  
-more info in the source code :p
+- `async saveSession(key = this.defaultKey)`  
+save dir handle to load in the later sessions
 
-- `pick(opts = { mode: 'readwrite' })`
-- `saveSession(key = this.defaultKey)`
-- `want(key = this.defaultKey)`
-- `function(event)`
-- `take(fileName, create = false)`
-- `_cd(dirName, create = false)`
-- `_ls(kind = null)`
-- `has(fileName)`
-- `hasDir(dirName)`
-- `delete(fileName)`
-- `cd(dirName, create = false)`
-- `read(fileName, create)`
-- `write(fileName, content = '')`
-- `mkdir(dirName)`
-- `ls(kind = null)`
-- `lsBoth()`
-- `dirOf(fullPath, create = false)`
-- `goto(dirFullPath, create = false)`
-- `reach(fileFullPath, create = false)`
-- `r(fileFullPath, create)`
-- `w(fileFullPath, contents = '', createPath = false)`
-- `d(fileFullPath)`
-- `dirs(create = false)`
-- `exists(fullPath)`
-- `copyFile(filePath1, filePath2)`
-- `moveFile(filePath1, filePath2)`
-- `copyInside(dirPath1, dirPath2, recursive = false)`
-- `clear(recursive = false)`
-- `either(fileFullPath, content = "")`
+
+- `async take(fileName, create = false)`  
+returns file handle
+
+
+- `async _cd(dirName, create = false)`  
+returns sub directory handle
+
+
+- `async _ls(kind = null)`  
+pass `"file"` or `"directory"` to filter handles
+
+
+- `async has(fileName)`  
+returns `true` if has the file, `false` if not. 
+
+
+- `async hasDir(dirName)`  
+returns `true` if has the directory, `false` if not
+
+
+- `async cd(dirName, create = false)`  
+`_cd` returning a Dirv instead of dir handle
+
+
+- `async read(fileName, create)`  
+simplest way to read a top level file
+
+
+- `async write(fileName, content = '')`  
+simplest way to write to a top level file
+
+
+- `async mkdir(dirName)`  
+create a directory and return its Dirv. trhows if directory exists.
+
+
+- `async ls(kind = null)`  
+same with `_ls` but returns names
+
+
+- `async dirOf(fullPath, create = false)`  
+returns path Dirv and last part's (file or folder) name string tuple
+
+
+- `async goto(dirFullPath, create = false)`  
+cd by full path to directory.
+
+
+- `async reach(fileFullPath, create = false)`  
+returns file handle for given file path
+
+
+- `async r(fileFullPath, create)`  
+read a file by its path and return text string
+
+
+- `async w(fileFullPath, contents = '', createPath = false)`  
+write to a file by its path
+
+
+- `async dirs(create = false)`  
+enables us to deconstruct Dirv that we cd in by its name. 
+`const { childDir } = await dirv.dirs ` is same with 
+`const childDir = await dirv.cd("childDir")` // no duplicate "ChildDir" needed 
+
+
+- `async exists(fullPath)`  
+returns `true` or `false` if the given file or directory exists or not. 
+end with "/" for directory. "sub/name" file, "sub/name/" directory.
+
+
+- `async copyFile(filePath1, filePath2)`  
+copy the content of filePath1 to filePath2
+
+
+- `async moveFile(filePath1, filePath2)`  
+move file at filePath1 to filePath2
+
+
+- `async copyInside(dirPath1, dirPath2, recursive = false)`  
+copy the content of filePath1 to filePath2
+
+
+- `async clear(recursive = false)`  
+can take a while. clear method is called for every sub dirv recursively.
+
+
+- `async either(fileFullPath, content = "")`  
+reads file. if don't exist, write provided content and return to it.
+
