@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Dirv demo</title>
+</head>
+<body>
+	<style>
+		:root {
+			color-scheme: dark;
+		}
+	</style>
+	pick a directory, then open the console. `window.dirv` is the Dirv instance 
+	for the directory you choose to try its methods. keep in mind that all 
+	methods are async (ctrl + shift + j to open the console) <br>
+	<br>
+	some commands to try <br>
+	await window.dirv.read("file.txt") <br>
+	window.dirv = await window.dirv.cd("sup") && window.dirv.write("hi.txt")<br>
+	<br>
+	<br>
+	<input type="text" id="prefixer"><button id="run">run</button> <br>
+	you can use this input to prefix your command with `await window.dirv.` <br>
+	<br>
+	<br>
+	<br>
+	<button id="picker">picker</button> <br>
+	<script type="module">
+		import { Dirv } from "../dirv.js"
+			try {
+				const loadedDirv = await Dirv.want("solkanat")
+				const continueButton = document.createElement("button")
+				continueButton.innerHTML = "continue"
+				continueButton.onclick = () => {
+					window.dirv = loadedDirv
+					continueButton.remove()
+				}
+				document.body.appendChild(continueButton)
+			} catch (err) {
+				console.log(err)
+			}
+		picker.onclick = async e => {
+			window.dirv = await Dirv.pick()
+			window.dirv.saveSession("solkanat")
+		}
+		// run other commands in console after picking a directory with picker
+		run.onclick = async function () {
+			if (!window.dirv) 
+				return confirm("first, pick a directory") && picker.click()
+			const result = await eval(`window.dirv.${prefixer.value}`)
+			console.log(result)
+		}
+
+	</script>
+</body>
+</html>
